@@ -134,7 +134,7 @@ public:
 					//if(abs(sqrt(t1)+sqrt(t2)-.5*r)<2)
 					//	g=1.0;
 
-					imageFrame->set( i, j,r*.05/(sqrt(t1)+1.0),0,0 );
+					imageFrame->set( i, j,min(1.0,r*.05/(sqrt(t1)+1.0)),0,0 );
 				//}
 				//else
 					//imageFrame->set( i, j, 0,((double)(k-3))/3.0,.5 );
