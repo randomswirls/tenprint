@@ -33,7 +33,7 @@ bool gl = false;
 double p = .5;
 double p1 = 1.0/3.0;
 double p2 = 2.0/3.0;
-double pc = 1;
+double pc = .5;
 
 int gOffsetX = 0;
 int gOffsetY = 0;
