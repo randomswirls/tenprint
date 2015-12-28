@@ -7,12 +7,13 @@
 using namespace std;
 
 ///////////////////////// CONSTANTS ///////////////////////////////////////
-const int WIDTH = 640;
-const int HEIGHT = 360;
-const int b = 20; // block size
-const double SQRT3 = sqrt(3.0);
+const int WIDTH = 1280;
+const int HEIGHT = 720;
+const int b = 60; // block size
+//const double SQRT3 = sqrt(3.0);
+#define SQRT3 1.73205080756
 const double r = b/SQRT3; // radius
-const int refreshMS =1; // refresh rate in milliseconds
+const int refreshMS =33; // refresh rate in milliseconds
 
 //////////////////////// TRIANGLE CONSTANTS ////////////////////////////////
 const double x4=0;
@@ -23,14 +24,16 @@ const double x6=SQRT3/2;
 const double y6=-.5;
 
 /////////////////////// GLOBAL VARIABLES ////////////////////////////////
-bool play=true; // Play/Pause control
+bool play=false; // Play/Pause control
 int framenumber = 1000;
 int maxframes = framenumber + 1800;
-bool saving = true;
+bool saving = false;
+bool debug = false;
+bool gl = false;
 double p = .5;
 double p1 = 1.0/3.0;
 double p2 = 2.0/3.0;
-double pc = .5;
+double pc = 1;
 
 int gOffsetX = 0;
 int gOffsetY = 0;
@@ -48,6 +51,9 @@ double vpc = 0;
 const int GWIDTH=1280/b+2;
 const int GHEIGHT=832/b+3; // must be an odd number? 832/b-5
 int grid[GHEIGHT][GWIDTH];
+int mouseHexagonX=10;
+int mouseHexagonY=10;
+
 
 FrameBuffer * imageFrame;
 
@@ -65,6 +71,9 @@ double uniformAtSeed(int seed, double min=0, double max=1)
 
 	return ret;
 }
+
+#include "rasterize.h"
+hexprintrasterizer hpr;
 
 ////////////////////////// DATA MANIP /////////////////////////////////////
 void regenerateRow(int y)
@@ -148,6 +157,9 @@ void init()
 	randomGrid();
 	imageFrame = new FrameBuffer();
 	imageFrame->init(WIDTH,HEIGHT);
+	if(!gl){
+		hpr.rasterize();
+	}
 }
 void threeProbs(int i, double amt)
 {
@@ -188,6 +200,26 @@ void threeProbs(int i, double amt)
 }
 
 ///////////////////////////// DRAWING SINGLE////////////////////////////////
+
+void hexagondoublelinesshapes(double cx, double cy, int k)
+{
+	if(k==0){
+		glVertex2f(cx+x4*r,cy+y4*r);
+		glVertex2f(cx+x5*r,cy+y5*r);
+		glVertex2f(cx+x4*r,cy-y4*r);
+		glVertex2f(cx+x6*r,cy-y6*r);
+	}else if(k==1){
+		glVertex2f(cx+x5*r,cy-y5*r);
+		glVertex2f(cx+x4*r,cy-y4*r);
+		glVertex2f(cx+x6*r,cy+y6*r);	
+		glVertex2f(cx+x4*r,cy+y4*r);
+	}else{
+		glVertex2f(cx+x5*r,cy+y5*r);
+		glVertex2f(cx+x6*r,cy+y6*r);	
+		glVertex2f(cx+x6*r,cy-y6*r);	
+		glVertex2f(cx+x5*r,cy-y5*r);	
+	}
+}
 void hexagondoublelines(double cx, double cy, int k)
 {
 	if(k==0){
@@ -250,12 +282,15 @@ void hexagonalllines(double cx, double cy)
 }
 void hexagon(double cx, double cy)
 {
+	glBegin(GL_POLYGON);
 	glVertex2f(cx+x4*r,cy+y4*r);
 	glVertex2f(cx+x5*r,cy-y5*r);
 	glVertex2f(cx+x5*r,cy+y5*r);
 	glVertex2f(cx+x4*r,cy-y4*r);
 	glVertex2f(cx+x6*r,cy+y6*r);	
-	glVertex2f(cx+x6*r,cy-y6*r);	
+	glVertex2f(cx+x6*r,cy-y6*r);
+	glEnd();
+
 }
 
 
@@ -270,9 +305,7 @@ void debugHexagons()
 		offset=!offset;
 		for( int i=0; i<WIDTH; i+=b){
 			//hexagon(i+(offset?b/2:0),j*.5*SQRT3);
-			glBegin(GL_POLYGON);
 			hexagon(i+(gOffsetY%2==1?b/2:0),j*.5*SQRT3);
-			glEnd();
 		}
 	}
 		glColor3f(.2,.8,1);
@@ -302,22 +335,70 @@ void randomHexagons()
 		glColor3f(.2,.8,1);
 
 }
+void drawMouseHexagon(){
+	bool offset = mouseHexagonY%2;
+	double i=(mouseHexagonX+gOffsetX)%GWIDTH*b;
+	double j=(mouseHexagonY+gOffsetY)%GHEIGHT*b;
+	glColor3f(1,.5,0);
+	hexagon(i+(offset?b/2:0),j*.5*SQRT3);
 
+	// above, switch offset
+	i=(mouseHexagonX+gOffsetX-1+(offset?1:0))%GWIDTH*b;
+	j=(mouseHexagonY+gOffsetY+1)%GHEIGHT*b;
+	glColor3f(.8,.8,0);
+	hexagon(i+(offset?0:b/2),j*.5*SQRT3);
+
+	i=(mouseHexagonX+gOffsetX+(offset?1:0))%GWIDTH*b;
+	j=(mouseHexagonY+gOffsetY+1)%GHEIGHT*b;
+	glColor3f(.5,.5,0);
+	hexagon(i+(offset?0:b/2),j*.5*SQRT3);
+
+	// same row
+	i=(mouseHexagonX+gOffsetX-1)%GWIDTH*b;
+	j=(mouseHexagonY+gOffsetY)%GHEIGHT*b;
+	glColor3f(.5,.5,0);
+	hexagon(i+(offset?b/2:0),j*.5*SQRT3);
+
+	i=(mouseHexagonX+gOffsetX+1)%GWIDTH*b;
+	j=(mouseHexagonY+gOffsetY)%GHEIGHT*b;
+	glColor3f(.7,.7,0);
+	hexagon(i+(offset?b/2:0),j*.5*SQRT3);
+
+	// below, switch offset
+	i=(mouseHexagonX+gOffsetX-1+(offset?1:0))%GWIDTH*b;
+	j=(mouseHexagonY+gOffsetY-1)%GHEIGHT*b;
+	glColor3f(.8,.8,0);
+	hexagon(i+(offset?0:b/2),j*.5*SQRT3);
+
+	i=(mouseHexagonX+gOffsetX+(offset?1:0))%GWIDTH*b;
+	j=(mouseHexagonY+gOffsetY-1)%GHEIGHT*b;
+	glColor3f(.5,.5,0);
+	hexagon(i+(offset?0:b/2),j*.5*SQRT3);
+}
+void mouseHexagon(int x, int y){
+
+	mouseHexagonY = floor((HEIGHT-y-1 +(1.0+.5)*b*.5*SQRT3 - offsetY)/b*2.0/SQRT3 - gOffsetY);
+	bool offset = mouseHexagonY%2;
+	mouseHexagonX = (x+(1.0+.5)*b-(offset?b/2:0)-offsetX)/b-gOffsetX;
+
+
+
+}
 ///////////////////////////// MAIN DRAW /////////////////////////////
 void hexagonComboPattern()
-{
-	//glScalef(1.2,1.2,1);
-	glTranslatef(-b,-b*.5*SQRT3,0);
-	glTranslatef(offsetX,offsetY,0);
-	
+{	
+	if(debug)
+		debugHexagons();
 	//if(play)	randomHexagons();
 
-	glLineWidth(1);
+	drawMouseHexagon();
+	//glLineWidth(1);
 
 	int k=0;
 	int i = 0;
 	int j = 0;
 	bool offset=true;
+	glColor3f(.2,.8,1);
 	glBegin(GL_LINES);
 	for( int y=0;y<GHEIGHT; y+=1){
 		offset=!offset;
@@ -334,23 +415,49 @@ void hexagonComboPattern()
 	}
 	glEnd();
 }
+void glhexprint()
+{
+	glColor3f(.2,.8,1);
+	glPushMatrix();
+	//glScalef(1.2,1.2,1);
+	glTranslatef(-b,-b*.5*SQRT3,0);
+	glTranslatef(offsetX,offsetY,0);
+	glLineWidth(1);
+	hexagonComboPattern();
+	/*glLineWidth(4);
+	glColor3f(.2,.8,.8);
+	hexagonComboPattern();
+	glLineWidth(3);
+	glColor3f(.2,.8,.6);
+	hexagonComboPattern();
+	glLineWidth(2);
+	glColor3f(.2,.8,.4);
+	hexagonComboPattern();
+	glLineWidth(1);
+	glColor3f(.2,.8,.2);
+	hexagonComboPattern();
+	glLineWidth(.5);
+	glColor3f(.5,1,0);
+	hexagonComboPattern();*/
+	glPopMatrix();
+
+}
 void display()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
-	glColor3f(.2,.8,1);
 	
-	glPushMatrix();
-	hexagonComboPattern(); 
-	glPopMatrix();
-
+	if(gl)
+		glhexprint();
+	else
+		imageFrame->draw();
 
 	if(saving && play){
 		glReadPixels(0,0,WIDTH,HEIGHT,GL_RGB,GL_FLOAT,imageFrame->framebuffer);
 		saveImage(imageFrame,"movie/prototype",framenumber++);
+		if(framenumber>=maxframes)
+			exit(0);
 	}
-	if(framenumber>=maxframes)
-		exit(0);
-
+	
 	glutSwapBuffers();
 	//cout<<"Drew"<<endl;
 }
@@ -438,6 +545,10 @@ void moveAround(int tag)
 			//cout<< gOffsetY <<'\t'<<GHEIGHT<<'\t' << offsetY <<endl;
 			regenerateRow((GHEIGHT-gOffsetY)%GHEIGHT);
 		}
+
+		if(!gl){
+			hpr.rasterize();
+		}
 	}
 
 	glutPostRedisplay(); 
@@ -490,7 +601,12 @@ void adjustProbabilities(unsigned char key, int x, int y)
 
 	if(key=='p' || key=='P')
 		play=!play;
-
+	if(key=='h' || key=='H')
+		debug=!debug;
+	if(key=='l' || key=='L')
+		gl=!gl;
+	if(key=='o' || key=='O')
+		saveImage(imageFrame,"images/hexprint");
 	/*int k = (int)key - 49;
 	if( k >=0 && k <=9){
 		MYMODE = (mymodes) k;
@@ -500,6 +616,7 @@ void adjustProbabilities(unsigned char key, int x, int y)
 	cout<<'\t'<< p1 <<'\t'<< p2-p1 <<'\t'<< 1.0-p2 <<'\t'<<'\t'<< pc <<endl;
 	glutPostRedisplay();
 }
+
 int main(int argc, char** argv)
 {
 	glutInit(&argc, argv);
@@ -522,7 +639,7 @@ int main(int argc, char** argv)
 
 	glutKeyboardFunc(adjustProbabilities);
 	glutSpecialFunc(adjustTranslation);
-	//glutMotionFunc(dragFunction);
+	glutPassiveMotionFunc(mouseHexagon);
 	//glutMouseFunc(mouseFunction);
 	glutTimerFunc(refreshMS,moveAround,0);
 	
