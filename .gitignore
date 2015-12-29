@@ -27,6 +27,8 @@ Thumbs.db
 *.vcxproj
 *.vcxproj.filters
 *.bmp
+*.jpg
+*.png
 obj/
 [Rr]elease*/
 _ReSharper*/

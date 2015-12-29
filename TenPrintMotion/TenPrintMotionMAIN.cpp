@@ -29,7 +29,7 @@ int framenumber = 1000;
 int maxframes = framenumber + 1800;
 bool saving = false;
 bool debug = false;
-bool gl = true;
+bool gl = false;
 double p = .5;
 double p1 = 1.0/3.0;
 double p2 = 2.0/3.0;
@@ -378,11 +378,11 @@ void drawMouseHexagon(){
 }
 void mouseHexagon(int x, int y){
 
-	//mouseHexagonY = floor((HEIGHT-y-1 +(1.0+.5)*b*.5*SQRT3 - offsetY)/b*2.0/SQRT3 - gOffsetY);
-	mouseHexagonY= ((int)floor((HEIGHT-y-1 + (1.0+.5)*b*.5*SQRT3-offsetY)/b*2.0/SQRT3 - gOffsetY)+GHEIGHT)%GHEIGHT;
+	mouseHexagonY = floor((HEIGHT-y-1 +(1.0+.5)*b*.5*SQRT3 - offsetY)/b*2.0/SQRT3 - gOffsetY);
+	//mouseHexagonY= ((int)floor((HEIGHT-y-1 + (1.0+.5)*b*.5*SQRT3-offsetY)/b*2.0/SQRT3 - gOffsetY)+GHEIGHT)%GHEIGHT;
 	bool offset = mouseHexagonY%2;
-	//mouseHexagonX = floor((x+(1.0+.5)*b-(offset?b/2:0)-offsetX)/b-gOffsetX);
-	mouseHexagonX= ((int)floor((x + (1.0+.5)*b-(offset?b/2:0)-offsetX)/b-gOffsetX)+GWIDTH)%GWIDTH;
+	mouseHexagonX = floor((x+(1.0+.5)*b-(offset?b/2:0)-offsetX)/b-gOffsetX);
+	//mouseHexagonX= ((int)floor((x + (1.0+.5)*b-(offset?b/2:0)-offsetX)/b-gOffsetX)+GWIDTH)%GWIDTH;
 	
 	cout<< x <<'\t'<< y <<'\t'<< mouseHexagonX<<'\t'<<mouseHexagonY<<endl;
 
@@ -395,7 +395,6 @@ void hexagonComboPattern()
 	//if(play)	randomHexagons();
 
 	drawMouseHexagon();
-	//glLineWidth(1);
 
 	int k=0;
 	int i = 0;
@@ -425,23 +424,8 @@ void glhexprint()
 	//glScalef(1.2,1.2,1);
 	glTranslatef(-b,-b*.5*SQRT3,0);
 	glTranslatef(offsetX,offsetY,0);
-	glLineWidth(1);
+	glLineWidth(2.0);
 	hexagonComboPattern();
-	/*glLineWidth(4);
-	glColor3f(.2,.8,.8);
-	hexagonComboPattern();
-	glLineWidth(3);
-	glColor3f(.2,.8,.6);
-	hexagonComboPattern();
-	glLineWidth(2);
-	glColor3f(.2,.8,.4);
-	hexagonComboPattern();
-	glLineWidth(1);
-	glColor3f(.2,.8,.2);
-	hexagonComboPattern();
-	glLineWidth(.5);
-	glColor3f(.5,1,0);
-	hexagonComboPattern();*/
 	glPopMatrix();
 
 }
@@ -499,17 +483,16 @@ void randomProbs()
 	threeProbs(floor(vp),(1.0-fmod(vp,1.0))*.01);
 	threeProbs(fmod(3.0+ceil(vp),3.0),fmod(vp,1.0)*.01);
 	pc+=uniform(-.01,.01);
-	//pc+=vpc*.01;
 	pc = max(0.0,min(1.0,pc));
 
 		cout<<'\t'<< p1 <<'\t'<< p2-p1 <<'\t'<< 1.0-p2 <<'\t'<<'\t'<< pc <<endl;
 
 
 };
-void moveAround(int tag)
+void timestep(int tag)
 {
 
-	glutTimerFunc(refreshMS,moveAround,0);
+	glutTimerFunc(refreshMS,timestep,0);
 	
 	if(play){
 		
@@ -572,7 +555,7 @@ void adjustTranslation(int key, int x, int y)
 	ax/=amag;
 	ay/=amag;
 }
-void adjustProbabilities(unsigned char key, int x, int y)
+void adjustProperties(unsigned char key, int x, int y)
 {
 	const double incr = .1;
 	if(key=='q'){
@@ -610,12 +593,7 @@ void adjustProbabilities(unsigned char key, int x, int y)
 		gl=!gl;
 	if(key=='o' || key=='O')
 		saveImage(imageFrame,"images/hexprint");
-	/*int k = (int)key - 49;
-	if( k >=0 && k <=9){
-		MYMODE = (mymodes) k;
-		cout << "change mode: " << k <<endl;
-	}
-	cout<< "k " << k << endl;*/
+	
 	cout<<'\t'<< p1 <<'\t'<< p2-p1 <<'\t'<< 1.0-p2 <<'\t'<<'\t'<< pc <<endl;
 	glutPostRedisplay();
 }
@@ -631,20 +609,17 @@ int main(int argc, char** argv)
 	glutCreateWindow("Ten Print Motion");
 
 	//make it smooth
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	//glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
 	glEnable(GL_LINE_SMOOTH);
 	
-	//init();
-	//initCreatures();
 	glutDisplayFunc(display);
 
 
-	glutKeyboardFunc(adjustProbabilities);
+	glutKeyboardFunc(adjustProperties);
 	glutSpecialFunc(adjustTranslation);
 	glutPassiveMotionFunc(mouseHexagon);
-	//glutMouseFunc(mouseFunction);
-	glutTimerFunc(refreshMS,moveAround,0);
+	glutTimerFunc(refreshMS,timestep,0);
 	
 	gluOrtho2D(0, WIDTH, 0, HEIGHT);
 
