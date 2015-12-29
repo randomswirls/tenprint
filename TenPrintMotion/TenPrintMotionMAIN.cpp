@@ -9,7 +9,7 @@ using namespace std;
 ///////////////////////// CONSTANTS ///////////////////////////////////////
 const int WIDTH = 1280;
 const int HEIGHT = 720;
-const int b = 60; // block size
+const int b = 50; // block size
 //const double SQRT3 = sqrt(3.0);
 #define SQRT3 1.73205080756
 const double r = b/SQRT3; // radius
@@ -29,7 +29,7 @@ int framenumber = 1000;
 int maxframes = framenumber + 1800;
 bool saving = false;
 bool debug = false;
-bool gl = false;
+bool gl = true;
 double p = .5;
 double p1 = 1.0/3.0;
 double p2 = 2.0/3.0;
@@ -44,12 +44,13 @@ double ax=0;
 double ay=1;
 double vx = 1;
 double vy = 0;
+double speedmult = .5;
 
 double vp = 0;
 double vpc = 0;
 
 const int GWIDTH=1280/b+2;
-const int GHEIGHT=832/b+3; // must be an odd number? 832/b-5
+const int GHEIGHT=832/b+4; // needs to evaluate to an even number, otherwise you will get overlapping offsets when you cycle around 832/30-5
 int grid[GHEIGHT][GWIDTH];
 int mouseHexagonX=10;
 int mouseHexagonY=10;
@@ -377,11 +378,13 @@ void drawMouseHexagon(){
 }
 void mouseHexagon(int x, int y){
 
-	mouseHexagonY = floor((HEIGHT-y-1 +(1.0+.5)*b*.5*SQRT3 - offsetY)/b*2.0/SQRT3 - gOffsetY);
+	//mouseHexagonY = floor((HEIGHT-y-1 +(1.0+.5)*b*.5*SQRT3 - offsetY)/b*2.0/SQRT3 - gOffsetY);
+	mouseHexagonY= ((int)floor((HEIGHT-y-1 + (1.0+.5)*b*.5*SQRT3-offsetY)/b*2.0/SQRT3 - gOffsetY)+GHEIGHT)%GHEIGHT;
 	bool offset = mouseHexagonY%2;
-	mouseHexagonX = (x+(1.0+.5)*b-(offset?b/2:0)-offsetX)/b-gOffsetX;
-
-
+	//mouseHexagonX = floor((x+(1.0+.5)*b-(offset?b/2:0)-offsetX)/b-gOffsetX);
+	mouseHexagonX= ((int)floor((x + (1.0+.5)*b-(offset?b/2:0)-offsetX)/b-gOffsetX)+GWIDTH)%GWIDTH;
+	
+	cout<< x <<'\t'<< y <<'\t'<< mouseHexagonX<<'\t'<<mouseHexagonY<<endl;
 
 }
 ///////////////////////////// MAIN DRAW /////////////////////////////
@@ -476,7 +479,7 @@ void randomTranslates()
 	vx+=ax;
 	vy+=ay;
 
-	double speed = sqrt(vx*vx+vy*vy)/4.0;
+	double speed = sqrt(vx*vx+vy*vy)/speedmult;
 
 	vx/=speed;
 	vy/=speed;

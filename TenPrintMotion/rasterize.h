@@ -18,9 +18,9 @@ vec2 indexToPoint(int x, int y)
 {
 	bool offset = (int)(y)%2;
 	return vec2(
-		((x+gOffsetX-1)%GWIDTH*b)+(offset?b/2:0)+offsetX,
-		((y+gOffsetY-1)%GHEIGHT*b)*.5*SQRT3+offsetY
-		);
+		((x+gOffsetX)%GWIDTH*b-b)+(offset?b/2:0)+offsetX,
+		((y+gOffsetY)%GHEIGHT*b-b)*.5*SQRT3+offsetY
+		); // Why an extra -b... no idea
 	
 }
 class hexprintrasterizer{
@@ -40,6 +40,7 @@ class hexprintrasterizer{
 	}
 	double thex(int x,int y, vec2 & p,double & t1, double & t2)
 	{
+		float weird = 1.0;
 		x=(x+GWIDTH)%GWIDTH;
 		y=(y+GHEIGHT)%GHEIGHT;
 		int k= grid[y][x];
@@ -50,28 +51,32 @@ class hexprintrasterizer{
 		}
 		else{
 			k=k-3;
-			t= linedist(p,indexToPoint(x,y)+tp[k]*(float)r,(tp[k+2]-tp[k])/(float)SQRT3,SQRT3*r);
+			t= linedist(p,indexToPoint(x,y)+tp[k]*(float)r,(tp[k+2]-tp[k])/(float)SQRT3/weird,SQRT3*r*weird);
 			if(t<t1) t1=t; else if(t<t2) t2=t;
-			t= linedist(p,indexToPoint(x,y)+tp[(k+5)%6]*(float)r,(tp[(k+3)%6]-tp[(k+5)%6])/(float)SQRT3,SQRT3*r);
+			t= linedist(p,indexToPoint(x,y)+tp[(k+5)%6]*(float)r,(tp[(k+3)%6]-tp[(k+5)%6])/(float)SQRT3/weird,SQRT3*r*weird);
 			if(t<t1) t1=t; else if(t<t2) t2=t;
 		}
 
 		return t;
 	}
+	unsigned int time;
 public:
-	hexprintrasterizer(){};
+	hexprintrasterizer(){time=0;};
 	void rasterize()
 	{
 		//int hi,hj;
 		//int k=0;
+		time++;
 
-		
 		for(int j = 0; j<HEIGHT; j++){
 			for(int i = 0; i<WIDTH; i++){
 			
+				//if(uniform()>.1)
+				if((++time%3)!=0)//||uniform()>.9)
+					continue;
 				int y = ((int)floor((j + (1.0+.5)*b*.5*SQRT3-offsetY)/b*2.0/SQRT3 - gOffsetY)+GHEIGHT)%GHEIGHT;
 				bool offset = y%2;
-				int x = (i + (1.0+.5)*b-(offset?b/2:0)-offsetX)/b-gOffsetX;
+				int x = ((int)floor((i + (1.0+.5)*b-(offset?b/2:0)-offsetX)/b-gOffsetX)+GWIDTH)%GWIDTH;
 				//int x= GWIDTH/2;
 				//int y = GHEIGHT/2;
 				//int y = (j + (1.0+.5)*b*.5*SQRT3)/b*2.0/SQRT3;
@@ -130,11 +135,20 @@ public:
 					t=thex(x+(offset?1:0),y-1,vec2(i,j),t1,t2);
 					//if(t<t1) t1=t; else if(t<t2) t2=t;
 
-					//double g = 0;
-					//if(abs(sqrt(t1)+sqrt(t2)-.5*r)<2)
-					//	g=1.0;
+					double g = 0;
+					//double thingy = abs(sqrt(t1)+sqrt(t2)-.5*r);
+					//if(thingy<10)
+					//	g=(10.0-thingy)/10.0;
+					double grad = r*.1/(sqrt(t1)+1.0);
 
-					imageFrame->set( i, j,min(1.0,r*.05/(sqrt(t1)+1.0)),0,0 );
+					double pink =1.0-abs(2.0*min(1.0,max(0.0,grad-.2)/.8)-1.0); 
+					double cyan = min(1.0,max(0.0,grad*.5-.5)/.5);
+
+					//imageFrame->set( i, j,1.0-abs(2.0*min(1.0,max(0.0,r*.1/(sqrt(t1)+1.0)-.2)/.8)-1.0),g,0 );
+					imageFrame->set( i, j,
+						min(1.0,	pink*1.0*((float)i/WIDTH*.5+.5)),
+						min(1.0,								cyan*1.0),
+						min(1.0,	pink*.8*((float)j/HEIGHT*.5+.5)		+cyan*1.0*((float)i/WIDTH*.5+.5)));
 				//}
 				//else
 					//imageFrame->set( i, j, 0,((double)(k-3))/3.0,.5 );
